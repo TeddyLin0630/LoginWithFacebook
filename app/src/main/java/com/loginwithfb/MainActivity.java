@@ -4,94 +4,83 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
-import android.support.v4.app.FragmentActivity;
-import android.util.Log;
+import android.support.v7.app.AppCompatActivity;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.RequestBuilder;
-import com.facebook.CallbackManager;
-import com.facebook.Profile;
-import com.facebook.ProfileTracker;
 import com.facebook.login.widget.LoginButton;
+import com.loginwithfb.common.IThirdPartyCallback;
+import com.loginwithfb.data.ThirdPartyProfile;
+import com.loginwithfb.thirdparty.FaceBook;
 
 import java.util.Arrays;
 
-public class MainActivity extends FragmentActivity {
+public class MainActivity extends AppCompatActivity implements IThirdPartyCallback {
+
     private final String MY_PREFS_NAME = "login_with_fb";
-    CallbackManager callbackManager;
+
+    FaceBook mFB;
+    ThirdPartyProfile facebookProfile;
     LoginButton loginButton;
-    ProfileTracker profileTracker;
     TextView name;
     ImageView pic;
-    String nameStr;
-    String picUrl240;
-    String picUrl48;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        callbackManager = CallbackManager.Factory.create();
+
+        mFB = new FaceBook();
+        mFB.init(this);
         loginButton = findViewById(R.id.login_button);
+        loginButton.setReadPermissions(Arrays.asList("user_status"));
+
         name = findViewById(R.id.name);
         pic = findViewById(R.id.pic);
-        loginButton.setReadPermissions(Arrays.asList("user_status"));
-        profileTracker = new ProfileTracker() {
-            @Override
-            protected void onCurrentProfileChanged(
-                    Profile oldProfile,
-                    Profile currentProfile) {
-                if (currentProfile != null) {
-                    nameStr = currentProfile.getName();
-                    picUrl240 = currentProfile.getProfilePictureUri(240, 240).toString();
-                    picUrl48 = currentProfile.getProfilePictureUri(48, 48).toString();
-                } else {
-                    nameStr = null;
-                    picUrl48 = null;
-                    picUrl240 = null;
-                }
-                updateInfo();
-                writeContent();
-            }
-        };
 
-        if (readContent()) {
+        if (readFBContent()) {
             updateInfo();
         }
     }
 
     private void updateInfo() {
-        name.setText(nameStr);
+        name.setText(facebookProfile.getName());
         RequestBuilder<Drawable> requestBuilder = Glide.with(getBaseContext())
-                .load(picUrl240);
+                .load(facebookProfile.getPicUrl());
 
         requestBuilder
-                .thumbnail(Glide.with(getBaseContext()).load(picUrl48))
-                .load(picUrl240)
+                .thumbnail(Glide.with(getBaseContext()).load(facebookProfile.getThumbnailUrl()))
+                .load(facebookProfile.getPicUrl())
                 .into(pic);
     }
 
-    private void writeContent() {
+    private void writeFBContent() {
         SharedPreferences.Editor editor = getSharedPreferences(MY_PREFS_NAME, MODE_PRIVATE).edit();
-        editor.putString("name", nameStr);
-        editor.putString("picUrl240", picUrl240);
-        editor.putString("picUrl48", picUrl48);
+        editor.putString("name", facebookProfile.getName());
+        editor.putString("picUrl240", facebookProfile.getPicUrl());
+        editor.putString("picUrl48", facebookProfile.getThumbnailUrl());
         editor.apply();
     }
 
-    private boolean readContent() {
+    private boolean readFBContent() {
         SharedPreferences prefs = getSharedPreferences(MY_PREFS_NAME, MODE_PRIVATE);
-        nameStr = prefs.getString("name", null);//"No name defined" is the default value.
-        picUrl240 = prefs.getString("picUrl240", null); //0 is the default value.
-        picUrl48 = prefs.getString("picUrl48", null); //0 is the default value.
-        return nameStr != null && picUrl240 != null && picUrl48 != null;
+        facebookProfile.setName(prefs.getString("name", null));
+        facebookProfile.setPicUrl(prefs.getString("picUrl240", null));
+        facebookProfile.setThumbnailUrl(prefs.getString("picUrl48", null));
+        return facebookProfile.check();
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        callbackManager.onActivityResult(requestCode, resultCode, data);
+        mFB.returnCallbackManager(requestCode, resultCode, data);
+    }
+
+    @Override
+    public void onChange(ThirdPartyProfile profile) {
+        facebookProfile = profile;
+        writeFBContent();
     }
 }
