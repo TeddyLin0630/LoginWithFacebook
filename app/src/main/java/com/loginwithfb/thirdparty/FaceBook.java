@@ -17,7 +17,7 @@ public class FaceBook implements IThirdParty {
     CallbackManager callbackManager;
     ProfileTracker profileTracker;
     IThirdPartyCallback thirdPartyCallback;
-    ThirdPartyProfile profile;
+    ThirdPartyProfile profile = new ThirdPartyProfile();
 
     @Override
     public void init(IThirdPartyCallback callback) {
@@ -32,11 +32,10 @@ public class FaceBook implements IThirdParty {
                     profile.setName(currentProfile.getName());
                     profile.setPicUrl(currentProfile.getProfilePictureUri(240, 240).toString());
                     profile.setThumbnailUrl(currentProfile.getProfilePictureUri(48, 48).toString());
+                    thirdPartyCallback.onChange(profile);
                 } else {
-                    profile.reset();
+                    thirdPartyCallback.onReset(profile);
                 }
-
-                thirdPartyCallback.onChange(profile);
             }
         };
     }

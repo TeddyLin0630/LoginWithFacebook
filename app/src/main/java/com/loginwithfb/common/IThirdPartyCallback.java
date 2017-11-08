@@ -7,5 +7,7 @@ import com.loginwithfb.data.ThirdPartyProfile;
  */
 
 public interface IThirdPartyCallback {
+    void onReset(ThirdPartyProfile profile);
     void onChange(ThirdPartyProfile profile);
+    void onUpdateInfo(ThirdPartyProfile profile);
 }
